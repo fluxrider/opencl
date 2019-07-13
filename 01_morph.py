@@ -24,14 +24,11 @@ grayscale_format = cl.ImageFormat(cl.channel_order.LUMINANCE, cl.channel_type.UN
 in_device = cl.Image(context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, grayscale_format, shape=shape, hostbuf=in_host)
 out_device = cl.Image(context, cl.mem_flags.WRITE_ONLY, grayscale_format, shape=shape)
 
-# load, compile OpenCL program, and fetch function ptr
+# load and compile OpenCL program
 program = cl.Program(context, open('01_morph.cl').read()).build()
-dilate = cl.Kernel(program, 'dilate')
 
-# copy image to device, execute kernel, copy data back
-dilate.set_arg(0, in_device)
-dilate.set_arg(1, out_device)
-cl.enqueue_nd_range_kernel(queue, dilate, shape, None)
+# call dilate function
+program.dilate(queue, shape, None, in_device, out_device)
 cl.enqueue_copy(queue, out_host, out_device, origin=(0, 0), region=shape, is_blocking=True)
 
 # write output to file
