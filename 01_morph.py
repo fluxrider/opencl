@@ -14,10 +14,7 @@ shape = in_host.T.shape
 out_host = np.empty_like(in_host)
 
 # setup OpenCL
-platforms = cl.get_platforms()
-platform = platforms[0]
-devices = platform.get_devices()
-device = devices[0]
+device = cl.get_platforms()[0].get_devices()[0]
 context = cl.Context([device])
 queue = cl.CommandQueue(context, device)
 
