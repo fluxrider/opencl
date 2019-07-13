@@ -1,6 +1,6 @@
-# This code is a mixture of:
-# http://www.drdobbs.com/open-source/easy-opencl-with-python/240162614
+# This code is a derived mixture of:
 # https://towardsdatascience.com/get-started-with-gpu-image-processing-15e34b787480
+# http://www.drdobbs.com/open-source/easy-opencl-with-python/240162614
 
 import cv2
 import numpy as np
@@ -19,7 +19,7 @@ device = devices[0]
 context = cl.Context([device])
 queue = cl.CommandQueue(context, device)
 
-# create image buffers which hold images for OpenCL (the 'device' is the gpu)
+# create buffers that hold images for OpenCL (the 'device' is the gpu), and copy the input image data
 grayscale_format = cl.ImageFormat(cl.channel_order.LUMINANCE, cl.channel_type.UNORM_INT8)
 in_device = cl.Image(context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, grayscale_format, shape=shape, hostbuf=in_host)
 out_device = cl.Image(context, cl.mem_flags.WRITE_ONLY, grayscale_format, shape=shape)
@@ -27,7 +27,7 @@ out_device = cl.Image(context, cl.mem_flags.WRITE_ONLY, grayscale_format, shape=
 # load and compile OpenCL program
 program = cl.Program(context, open('01_morph.cl').read()).build()
 
-# call dilate function
+# call dilate function and copy back result
 program.dilate(queue, shape, None, in_device, out_device)
 cl.enqueue_copy(queue, out_host, out_device, origin=(0, 0), region=shape, is_blocking=True)
 

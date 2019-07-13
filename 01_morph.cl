@@ -1,9 +1,9 @@
 // This code is derived from:
 // https://towardsdatascience.com/get-started-with-gpu-image-processing-15e34b787480
 
-__constant sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_FILTER_NEAREST | CLK_ADDRESS_CLAMP_TO_EDGE;
+constant sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_FILTER_NEAREST | CLK_ADDRESS_CLAMP_TO_EDGE;
 
-__kernel void dilate(__read_only image2d_t in, __write_only image2d_t out) {
+kernel void dilate(read_only image2d_t in, write_only image2d_t out) {
   const int x = get_global_id(0);
   const int y = get_global_id(1);
 
