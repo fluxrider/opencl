@@ -1,6 +1,8 @@
 # This code is a derived mixture of:
 # https://towardsdatascience.com/get-started-with-gpu-image-processing-15e34b787480
 # http://www.drdobbs.com/open-source/easy-opencl-with-python/240162614
+#
+# Tested with OpenCL 1.2 CUDA 10.1.152 GeForce GTX 760 on Windows 10
 
 import cv2
 import numpy as np
@@ -27,9 +29,12 @@ out_device = cl.Image(context, cl.mem_flags.WRITE_ONLY, grayscale_format, shape=
 # load and compile OpenCL program
 program = cl.Program(context, open('01_morph.cl').read()).build()
 
-# call dilate function and copy back result
+# call dilate function, copy back result, and write to file
 program.dilate(queue, shape, None, in_device, out_device)
 cl.enqueue_copy(queue, out_host, out_device, origin=(0, 0), region=shape, is_blocking=True)
+cv2.imwrite('out.dilate.png', out_host)
 
-# write output to file
-cv2.imwrite('out.png', out_host)
+# call erode function, copy back result, and write to file
+program.erode(queue, shape, None, in_device, out_device)
+cl.enqueue_copy(queue, out_host, out_device, origin=(0, 0), region=shape, is_blocking=True)
+cv2.imwrite('out.erode.png', out_host)
