@@ -1,5 +1,5 @@
-# This code is derived from:
-# https://towardsdatascience.com/get-started-with-gpu-image-processing-15e34b787480
+// This code is derived from:
+// https://towardsdatascience.com/get-started-with-gpu-image-processing-15e34b787480
 
 __constant sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_FILTER_NEAREST | CLK_ADDRESS_CLAMP_TO_EDGE;
 

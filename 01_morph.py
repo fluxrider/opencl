@@ -21,7 +21,7 @@ queue = cl.CommandQueue(context, device)
 
 # create image buffers which hold images for OpenCL (the 'device' is the gpu)
 grayscale_format = cl.ImageFormat(cl.channel_order.LUMINANCE, cl.channel_type.UNORM_INT8)
-in_device = cl.Image(context, cl.mem_flags.READ_ONLY, grayscale_format, shape=shape)
+in_device = cl.Image(context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, grayscale_format, shape=shape, hostbuf=in_host)
 out_device = cl.Image(context, cl.mem_flags.WRITE_ONLY, grayscale_format, shape=shape)
 
 # load, compile OpenCL program, and fetch function ptr
@@ -29,7 +29,6 @@ program = cl.Program(context, open('01_morph.cl').read()).build()
 dilate = cl.Kernel(program, 'dilate')
 
 # copy image to device, execute kernel, copy data back
-cl.enqueue_copy(queue, in_device, in_host, origin=(0, 0), region=shape, is_blocking=False)
 dilate.set_arg(0, in_device)
 dilate.set_arg(1, out_device)
 cl.enqueue_nd_range_kernel(queue, dilate, shape, None)
