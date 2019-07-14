@@ -36,12 +36,14 @@ s = np.arange(samples) * ((depth - 1) / (samples - 1))
 map = np.empty((W, H))
 smooth = np.empty((samples, W, H))
 
+# load pre-calculated cdf
 cdf = np.fromfile(f"out.{depth}.{samples}.{sigmaK}.cdf", dtype='double').reshape(samples,depth)
 
 for i in range(samples):
   print(f"sample {i}")
   cache = {}
   # map each pixel of image
+  # TODO #2 put loop on GPU
   for y in range(H):
     for x in range(W):
       # scale pixel intensity to depth
