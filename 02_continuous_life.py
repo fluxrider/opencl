@@ -71,8 +71,9 @@ PIL.Image.fromarray(out).save('out.png')
 print(f"#save: {time.perf_counter_ns() - t0}")
 print(f"#tota: {time.perf_counter_ns() - g0}")
 
-#load: 17484900
-#smoo: 53050300
-#life: 619943800
-#save: 5753800
-#tota: 1226519200
+#impo: 441839300
+#load: 17559000
+#smoo: 51810300
+#life: 8656400
+#save: 4960600
+#tota: 627053600
