@@ -4,7 +4,6 @@
 
 import PIL.Image # pip install Pillow
 import numpy as np
-from scipy.stats import norm
 from scipy.interpolate import interp1d
 from scipy.ndimage import gaussian_filter
 import time
@@ -37,27 +36,23 @@ s = np.arange(samples) * ((depth - 1) / (samples - 1))
 map = np.empty((W, H))
 smooth = np.empty((samples, W, H))
 
-gauss = norm(loc=0, scale=sigmaK)
+cdf = np.fromfile(f"out.{depth}.{samples}.{sigmaK}.cdf", dtype='double').reshape(samples,depth)
+
 for i in range(samples):
   print(f"sample {i}")
   cache = {}
   # map each pixel of image
-  # TODO #2 put loop on GPU, may have to implement cdf() myself instead of using scipy, and discard cache altogether
-  # REMARK: actually, cdf's could be precomputed offline, they are independant on input image
   for y in range(H):
     for x in range(W):
       # scale pixel intensity to depth
       intensity = int((image[y, x]) * (depth - 1))
-      if intensity not in cache:
-        cache[intensity] = gauss.cdf(intensity - s[i])
-      map[x, y] = cache[intensity]
-
+      map[x, y] = cdf[i, intensity]
   # smooth result
   smooth[i] = gaussian_filter(map, sigma=sigmaW)
 
-
 # for each pixel
 # TODO #1 put loop on GPU, may have to precalculate interpolation since gpu doesn't have interp1d available
+# REMARK: but since interp1d is the bulk of the calculation, I need to implement it on the gpu
 for y in range(H):
   print(f"row {y}")
   for x in range(W):
