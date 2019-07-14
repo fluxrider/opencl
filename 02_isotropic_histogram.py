@@ -23,7 +23,7 @@ sigmaK = 13.0
 sigmaW = 2.0
 
 # read image from file as normalized grayscale
-image = np.asarray(PIL.Image.open('conway_init_small.png').convert('L')) / 255
+image = np.asarray(PIL.Image.open('conway_01.png').convert('L')) / 255
 
 # execute
 H = image.shape[0]
@@ -40,16 +40,15 @@ smooth = np.empty((samples, W, H))
 gauss = norm(loc=0, scale=sigmaK)
 for i in range(samples):
   print(f"sample {i}")
-  lookup = {}
+  cache = {}
   # map each pixel of image
   for y in range(H):
     for x in range(W):
       # scale pixel intensity to depth
       intensity = int((image[y, x]) * (depth - 1))
-      if intensity not in lookup:
-        lookup[intensity] = gauss.cdf(intensity - s[i])
-      # map with lookup
-      map[x, y] = lookup[intensity]
+      if intensity not in cache:
+        cache[intensity] = gauss.cdf(intensity - s[i])
+      map[x, y] = cache[intensity]
 
   # smooth result
   smooth[i] = gaussian_filter(map, sigma=sigmaW)
