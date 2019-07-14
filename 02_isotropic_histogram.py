@@ -22,8 +22,8 @@ samples = 20
 sigmaK = 13.0
 sigmaW = 2.0
 
-# read image from file as grayscale
-image = np.asarray(PIL.Image.open('conway_init_small.png').convert('L'))
+# read image from file as normalized grayscale
+image = np.asarray(PIL.Image.open('conway_init_small.png').convert('L')) / 255
 
 # execute
 H = image.shape[0]
@@ -54,7 +54,7 @@ for i in range(samples):
   for y in range(H):
     for x in range(W):
       # scale pixel intensity to depth
-      intensity = int((image[y, x] / 255) * (depth - 1))
+      intensity = int((image[y, x]) * (depth - 1))
       # map with lookup
       map[i, x, y] = lookup[intensity]
 
@@ -80,7 +80,7 @@ for y in range(H):
   print(f"row {y}")
   for x in range(W):
     # convert pixel to life force
-    life = image[y, x] / 255
+    life = image[y, x]
     # get the percentage of life in the neighborhood
     aliveNeighborhood = interpolation[x][y](aliveThreshold * 255)
 
