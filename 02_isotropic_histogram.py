@@ -43,6 +43,7 @@ for i in range(samples):
   cache = {}
   # map each pixel of image
   # TODO #2 put loop on GPU, may have to implement cdf() myself instead of using scipy, and discard cache altogether
+  # REMARK: actually, cdf's could be precomputed offline, they are independant on input image
   for y in range(H):
     for x in range(W):
       # scale pixel intensity to depth
