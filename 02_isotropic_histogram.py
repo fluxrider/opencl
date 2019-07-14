@@ -2,12 +2,32 @@
 # It uses an Isotropic Histogram Filter to gather information about the neighborhood. Filter is based on:
 # Smoothed Local Histogram Filters Pixar Technical Memo 10-02 by Michael Kass and Justin Solomon
 
+# powershell profiling: Measure-Command {start-process python 02_isotropic_histogram.py -Wait}
+
 import PIL.Image # pip install Pillow
 import numpy as np
 from scipy.interpolate import interp1d
 from scipy.ndimage import gaussian_filter
+#import pyopencl as cl
 import time
-#import pyopencl as cl # TMP this is the CPU version, which is pretty slow
+
+# setup OpenCL
+#device = cl.get_platforms()[0].get_devices()[0]
+#context = cl.Context([device])
+#queue = cl.CommandQueue(context, device)
+
+# create buffers that hold images for OpenCL (the 'device' is the gpu), and copy the input image data
+#grayscale_format = cl.ImageFormat(cl.channel_order.LUMINANCE, cl.channel_type.CL_FLOAT)
+#in_device = cl.Image(context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, grayscale_format, shape=shape, hostbuf=in_host)
+#out_device = cl.Image(context, cl.mem_flags.WRITE_ONLY, grayscale_format, shape=shape)
+
+# load and compile OpenCL program
+#program = cl.Program(context, open('01_morph.cl').read()).build()
+
+# call dilate function, copy back result, and write to file
+#program.dilate(queue, shape, None, in_device, out_device)
+#cl.enqueue_copy(queue, out_host, out_device, origin=(0, 0), region=shape, is_blocking=True)
+#cv2.imwrite('out.dilate.png', out_host)
 
 # life parameters
 aliveThreshold = .2
@@ -18,13 +38,15 @@ birthMax = .5
 # histogram paramaters
 sigmaW = 2.0
 
-# read image from file as normalized grayscale
-image = np.asarray(PIL.Image.open('conway_init.png').convert('L')) / 255
+# read image from file as normalized grayscale uint8
+t0 = time.perf_counter_ns()
+image = np.asarray(PIL.Image.open('conway_init.png').convert('L'))
+print(f"load: {time.perf_counter_ns() - t0}")
 
 # execute
 H = image.shape[0]
 W = image.shape[1]
-out = np.empty(image.shape)
+out = np.empty_like(image)
 
 # pre-calculated cdf
 #from scipy.stats import norm
@@ -35,23 +57,20 @@ cdf = [4.1002868059894214e-05, 5.640724836844843e-05, 7.71601683229369e-05, 0.00
 
 # isotropic histogram filter
 # TODO put loop on GPU
+t0 = time.perf_counter_ns()
 map = np.empty((W, H))
 for y in range(H):
   for x in range(W):
-    # scale pixel intensity to depth
-    intensity = image[y, x]
-    map[x, y] = cdf[int(intensity * 255)]
-# smooth result
+    map[x, y] = cdf[image[y, x]]
 smooth = gaussian_filter(map, sigma=sigmaW)
+print(f"smoo: {time.perf_counter_ns() - t0}")
 
 # for each pixel
 # TODO put loop on GPU
+t0 = time.perf_counter_ns()
 for y in range(H):
-  print(f"row {y}")
   for x in range(W):
-    # convert pixel to life force
-    life = image[y, x]
-    # get the percentage of life in the neighborhood
+    life = image[y, x] / 255
     aliveNeighborhood = smooth[x,y]
 
     # I need to remove the life force at the current position from the neighborhood count, but I'm not sure how to compute the population percentage
@@ -77,5 +96,13 @@ for y in range(H):
     
     # convert life to rgb
     out[y, x] = max(0, min(255, life * 255))
+print(f"life: {time.perf_counter_ns() - t0}")
 
-PIL.Image.fromarray(np.uint8(out)).save('out.png')
+t0 = time.perf_counter_ns()
+PIL.Image.fromarray(out).save('out.png')
+print(f"save: {time.perf_counter_ns() - t0}")
+
+#load: 16931700
+#smoo: 50175000
+#life: 585103800
+#save: 6340100
