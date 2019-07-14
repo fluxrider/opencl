@@ -4,6 +4,7 @@
 
 import PIL.Image # pip install Pillow
 import numpy as np
+from scipy.stats import norm
 from scipy.interpolate import interp1d
 from scipy.ndimage import gaussian_filter
 import time
@@ -17,7 +18,6 @@ birthMin = .25
 birthMax = .5
 # histogram paramaters
 depth = 256
-samples = 20
 sigmaK = 13.0
 sigmaW = 2.0
 
@@ -30,38 +30,32 @@ W = image.shape[1]
 out = np.empty(image.shape)
 
 # isotropic histogram filter
-# compute values for s[i]
-s = np.arange(samples) * ((depth - 1) / (samples - 1))
-# buffers
+s = aliveThreshold * (depth - 1)
 map = np.empty((W, H))
-smooth = np.empty((samples, W, H))
-
-# load pre-calculated cdf
-cdf = np.fromfile(f"out.{depth}.{samples}.{sigmaK}.cdf", dtype='double').reshape(samples,depth)
-
-for i in range(samples):
-  print(f"sample {i}")
-  cache = {}
-  # map each pixel of image
-  # TODO #2 put loop on GPU
-  for y in range(H):
-    for x in range(W):
-      # scale pixel intensity to depth
-      intensity = int((image[y, x]) * (depth - 1))
-      map[x, y] = cdf[i, intensity]
-  # smooth result
-  smooth[i] = gaussian_filter(map, sigma=sigmaW)
+    
+# map each pixel of image
+# TODO put loop on GPU
+gauss = norm(loc=0, scale=sigmaK)
+cdf_cache = {}
+for y in range(H):
+  for x in range(W):
+    # scale pixel intensity to depth
+    intensity = int((image[y, x]) * (depth - 1))
+    if intensity not in cdf_cache:
+      cdf_cache[intensity] = gauss.cdf(intensity - s)
+    map[x, y] = cdf_cache[intensity]
+# smooth result
+smooth = gaussian_filter(map, sigma=sigmaW)
 
 # for each pixel
-# TODO #1 put loop on GPU, may have to precalculate interpolation since gpu doesn't have interp1d available
-# REMARK: but since interp1d is the bulk of the calculation, I need to implement it on the gpu
+# TODO put loop on GPU
 for y in range(H):
   print(f"row {y}")
   for x in range(W):
     # convert pixel to life force
     life = image[y, x]
     # get the percentage of life in the neighborhood
-    aliveNeighborhood = interp1d(s, smooth[:,x,y], kind='linear')(aliveThreshold * 255) # TODO shouldn't it be (depth - 1)?
+    aliveNeighborhood = smooth[x,y]
 
     # I need to remove the life force at the current position from the neighborhood count, but I'm not sure how to compute the population percentage
     # value of one member of the neighborhood
