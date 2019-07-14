@@ -4,11 +4,11 @@
 
 import PIL.Image # pip install Pillow
 import numpy as np
-import pyopencl as cl
 from scipy.stats import norm
 from scipy.interpolate import interp1d
 from scipy.ndimage import gaussian_filter
 import time
+#import pyopencl as cl # TMP this is the CPU version, which is pretty slow
 
 # life parameters
 aliveThreshold = .2
@@ -23,7 +23,7 @@ sigmaK = 13.0
 sigmaW = 2.0
 
 # read image from file as normalized grayscale
-image = np.asarray(PIL.Image.open('conway_01.png').convert('L')) / 255
+image = np.asarray(PIL.Image.open('conway_init.png').convert('L')) / 255
 
 # execute
 H = image.shape[0]
