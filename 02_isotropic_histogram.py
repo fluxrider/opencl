@@ -42,6 +42,7 @@ for i in range(samples):
   print(f"sample {i}")
   cache = {}
   # map each pixel of image
+  # TODO #2 put loop on GPU, may have to implement cdf() myself instead of using scipy, and discard cache altogether
   for y in range(H):
     for x in range(W):
       # scale pixel intensity to depth
@@ -55,6 +56,7 @@ for i in range(samples):
 
 
 # for each pixel
+# TODO #1 put loop on GPU, may have to precalculate interpolation since gpu doesn't have interp1d available
 for y in range(H):
   print(f"row {y}")
   for x in range(W):
