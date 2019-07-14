@@ -8,19 +8,39 @@ import numpy as np
 from scipy.interpolate import interp1d
 from scipy.ndimage import gaussian_filter
 import pyopencl as cl
+import tkinter as tk
+import PIL.ImageTk
 
 # load opencl program
 device = cl.get_platforms()[0].get_devices()[0]
 context = cl.Context([device])
 queue = cl.CommandQueue(context, device)
 program = cl.Program(context, open('02_continuous_life.cl').read()).build()
-format_u8 = cl.ImageFormat(cl.channel_order.LUMINANCE, cl.channel_type.UNORM_INT8)
-format_f32 = cl.ImageFormat(cl.channel_order.LUMINANCE, cl.channel_type.FLOAT)
 
-# read image from file as grayscale uint8 and send it to the gpu
+# read image from file as grayscale uint8
 image = np.asarray(PIL.Image.open('conway_init.png').convert('L'))
 
-for j in range(100):
+# init gui
+root = tk.Tk()
+image_tk_persistent = None
+canvas = tk.Canvas(root, width=image.shape[1], height=image.shape[0])
+canvas_image = canvas.create_image(0, 0, anchor=tk.NW, image=image_tk_persistent)
+canvas.pack()
+
+def heartbeat(canvas, canvas_image):
+  global image
+  global context
+  global queue
+  global program
+  global device
+  format_u8 = cl.ImageFormat(cl.channel_order.LUMINANCE, cl.channel_type.UNORM_INT8)
+  format_f32 = cl.ImageFormat(cl.channel_order.LUMINANCE, cl.channel_type.FLOAT)
+
+  # update canvas
+  global image_tk_persistent
+  image_tk_persistent = PIL.ImageTk.PhotoImage(PIL.Image.fromarray(image))
+  canvas.itemconfig(canvas_image, image=image_tk_persistent)
+
   image_gpu = cl.Image(context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, format_u8, shape=image.shape, hostbuf=image)
 
   # isotropic histogram filter
@@ -37,7 +57,8 @@ for j in range(100):
   out = np.empty_like(image)
   cl.enqueue_copy(queue, out, out_gpu, origin=(0, 0), region=image.shape, is_blocking=True)
 
-  # save
-  PIL.Image.fromarray(out).save(f'out{j}.png')
-  
   image = out
+  canvas.after(1000, heartbeat, canvas, canvas_image)
+
+heartbeat(canvas, canvas_image)
+root.mainloop()
