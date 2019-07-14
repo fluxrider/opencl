@@ -34,7 +34,7 @@ out = np.empty(image.shape)
 # compute values for s[i]
 s = np.arange(samples) * ((depth - 1) / (samples - 1))
 # storage
-lookup = np.empty((samples, depth))
+lookup = np.empty(depth)
 map = np.empty((samples, W, H))
 smooth = np.empty((samples, W, H))
 
@@ -48,7 +48,7 @@ for i in range(samples):
   t0 = time.perf_counter_ns()
   gauss = norm(loc=0, scale=sigmaK)
   for intensity in range(depth):
-    lookup[i, intensity] = gauss.cdf(intensity - s[i])
+    lookup[intensity] = gauss.cdf(intensity - s[i])
   gcdf += time.perf_counter_ns() - t0
   # map each pixel of image
   for y in range(H):
@@ -56,7 +56,7 @@ for i in range(samples):
       # scale pixel intensity to depth
       intensity = int((image[y, x] / 255) * (depth - 1))
       # map with lookup
-      map[i, x, y] = lookup[i, intensity]
+      map[i, x, y] = lookup[intensity]
 
   # smooth result
   t0 = time.perf_counter_ns()
@@ -71,9 +71,9 @@ for y in range(H):
     interpolation[x][y] = interp1d(s, smooth[:,x,y], kind='cubic')
 inter += time.perf_counter_ns() - t0
 print(f"{gcdf}\n{gfilt}\n{inter}")
-#636740100
-#5679800
-#17376701300
+#574858000
+#4940000
+#857194700
 
 # for each pixel
 for y in range(H):
