@@ -22,10 +22,10 @@ kernel void continuous_life(write_only image2d_t out, read_only image2d_t image,
   const float sigmaW = 2.0f;
   // life parameters
   const float aliveThreshold = .2f;
-  const float aliveMin = .125f;
-  const float aliveMax = .5f;
-  const float birthMin = .25f;
-  const float birthMax = .5f;
+  const float aliveMin = .2f;
+  const float aliveMax = .40f;
+  const float birthMin = .224f;
+  const float birthMax = .26f;
   
   float life = read_imagef(image, sampler, (int2)(x, y)).s0;
   float aliveNeighborhood = read_imagef(smooth, sampler, (int2)(x, y)).s0;
@@ -39,7 +39,7 @@ kernel void continuous_life(write_only image2d_t out, read_only image2d_t image,
 
   // if alive
   if(life >= aliveThreshold) {
-    // stay alive and adjust life force if neighborhood alive population is within 12.5% to 50%, with life force being at its peak at 31.25%
+    // stay alive and adjust life force if neighborhood alive population is within threshold
     const float h = (aliveMax + aliveMin) / 2.0f;
     const float delta = h - aliveMin;
     if(aliveNeighborhood < aliveMin || aliveNeighborhood > aliveMax) life = 0.0f;
@@ -47,7 +47,7 @@ kernel void continuous_life(write_only image2d_t out, read_only image2d_t image,
   }
   // if almost dead or dead
   else {
-    // come to life if neighbohood alive population is withing 25% to 50%, with life force being at its peak at 37.5%
+    // come to life if neighbohood alive population is within threshold
     const float h = (birthMax + birthMin) / 2.0f;
     const float delta = h - birthMin;
     if(aliveNeighborhood < birthMin || aliveNeighborhood > birthMax) life = 0.0f;
