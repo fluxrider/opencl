@@ -34,36 +34,26 @@ out = np.empty(image.shape)
 # compute values for s[i]
 s = np.arange(samples) * ((depth - 1) / (samples - 1))
 # buffers
-lookup = np.empty(depth)
 map = np.empty((W, H))
 smooth = np.empty((samples, W, H))
 
-# timers
-gcdf = 0
-gfilt = 0
-
+gauss = norm(loc=0, scale=sigmaK)
 for i in range(samples):
   print(f"sample {i}")
-  # compute lookup table for each intensities
-  t0 = time.perf_counter_ns()
-  gauss = norm(loc=0, scale=sigmaK) # WEIRD: If I move this outside the loop, I get worst performance
-  for intensity in range(depth):
-    lookup[intensity] = gauss.cdf(intensity - s[i])
-  gcdf += time.perf_counter_ns() - t0
+  lookup = {}
   # map each pixel of image
   for y in range(H):
     for x in range(W):
       # scale pixel intensity to depth
       intensity = int((image[y, x]) * (depth - 1))
+      if intensity not in lookup:
+        lookup[intensity] = gauss.cdf(intensity - s[i])
       # map with lookup
       map[x, y] = lookup[intensity]
 
   # smooth result
-  t0 = time.perf_counter_ns()
   smooth[i] = gaussian_filter(map, sigma=sigmaW)
-  gfilt += time.perf_counter_ns() - t0
 
-print(f"{gcdf}\n{gfilt}")
 
 # for each pixel
 for y in range(H):
