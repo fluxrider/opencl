@@ -8,14 +8,15 @@ import pyopencl as cl
 from scipy.stats import norm
 from scipy.interpolate import interp1d
 from scipy.ndimage import gaussian_filter
+import time
 
-# LIFE parameters
+# life parameters
 aliveThreshold = .2
 aliveMin = .125
 aliveMax = .5
 birthMin = .25
 birthMax = .5
-# smoothing historgram paramaters
+# histogram paramaters
 depth = 256
 samples = 20
 sigmaK = 13.0
@@ -27,22 +28,28 @@ image = np.asarray(PIL.Image.open('conway_init_small.png').convert('L'))
 # execute
 H = image.shape[0]
 W = image.shape[1]
-out = np.zeros(image.shape)
+out = np.empty(image.shape)
 
 # isotropic histogram filter
 # compute values for s[i]
 s = np.arange(samples) * ((depth - 1) / (samples - 1))
-# Storage
-lookup = np.zeros((samples, depth))
-map = np.zeros((samples, W, H))
+# storage
+lookup = np.empty((samples, depth))
+map = np.empty((samples, W, H))
 smooth = np.empty((samples, W, H))
 
+gcdf = 0
+gfilt = 0
+inter = 0
+
 for i in range(samples):
-  print(i)
+  print(f"sample {i}")
   # compute lookup table for each intensities
+  t0 = time.perf_counter_ns()
   gauss = norm(loc=0, scale=sigmaK)
   for intensity in range(depth):
     lookup[i, intensity] = gauss.cdf(intensity - s[i])
+  gcdf += time.perf_counter_ns() - t0
   # map each pixel of image
   for y in range(H):
     for x in range(W):
@@ -52,16 +59,25 @@ for i in range(samples):
       map[i, x, y] = lookup[i, intensity]
 
   # smooth result
+  t0 = time.perf_counter_ns()
   smooth[i] = gaussian_filter(map[i], sigma=sigmaW)
+  gfilt += time.perf_counter_ns() - t0
 
-  # Cache interpolators
-  interpolation = [[0] * H for i in range(W)] # [W][H]
-  for y in range(H):
-    for x in range(W):
-      interpolation[x][y] = interp1d(s, smooth[:,x,y], kind='cubic')
+# Cache interpolators
+t0 = time.perf_counter_ns()
+interpolation = [[0] * H for i in range(W)] # [W][H]
+for y in range(H):
+  for x in range(W):
+    interpolation[x][y] = interp1d(s, smooth[:,x,y], kind='cubic')
+inter += time.perf_counter_ns() - t0
+print(f"{gcdf}\n{gfilt}\n{inter}")
+#636740100
+#5679800
+#17376701300
 
 # for each pixel
 for y in range(H):
+  print(f"row {y}")
   for x in range(W):
     # convert pixel to life force
     life = image[y, x] / 255
@@ -92,6 +108,5 @@ for y in range(H):
     
     # convert life to rgb
     out[y, x] = max(0, min(255, life * 255))
-    print((x,y))
-    
+
 PIL.Image.fromarray(np.uint8(out)).save('out.png')
