@@ -19,13 +19,9 @@ print(f"#impo: {time.perf_counter_ns() - t0}")
 device = cl.get_platforms()[0].get_devices()[0]
 context = cl.Context([device])
 queue = cl.CommandQueue(context, device)
+# load and compile OpenCL program
+program = cl.Program(context, open('02_continuous_life.cl').read()).build()
 
-# life parameters
-aliveThreshold = .2
-aliveMin = .125
-aliveMax = .5
-birthMin = .25
-birthMax = .5
 # histogram paramaters
 sigmaW = 2.0
 
@@ -35,17 +31,11 @@ image = np.asarray(PIL.Image.open('conway_init.png').convert('L'))
 out = np.empty_like(image)
 print(f"#load: {time.perf_counter_ns() - t0}")
 
-# create buffers that hold images for OpenCL (the 'device' is the gpu), and copy the input image data
-grayscale_format = cl.ImageFormat(cl.channel_order.LUMINANCE, cl.channel_type.UNORM_INT8)
-in_device = cl.Image(context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, grayscale_format, shape=image.shape, hostbuf=image)
-out_device = cl.Image(context, cl.mem_flags.WRITE_ONLY, grayscale_format, shape=out.shape)
-
-# load and compile OpenCL program
-program = cl.Program(context, open('02_continuous_life.cl').read()).build()
-
 # execute
 H = image.shape[0]
 W = image.shape[1]
+
+tshape = (W,H)
 
 # pre-calculated cdf
 #from scipy.stats import norm
@@ -64,38 +54,19 @@ for y in range(H):
 smooth = gaussian_filter(map, sigma=sigmaW)
 print(f"#smoo: {time.perf_counter_ns() - t0}")
 
-# for each pixel
-# TODO put loop on GPU
+# run game of life
 t0 = time.perf_counter_ns()
-for y in range(H):
-  for x in range(W):
-    life = image[y, x] / 255
-    aliveNeighborhood = smooth[x,y]
-
-    # I need to remove the life force at the current position from the neighborhood count, but I'm not sure how to compute the population percentage
-    # value of one member of the neighborhood
-    # I'm doing an approximation that gaussianW of 1 is approx 3x3 window, and gaussianW of 6 is approx 15x15
-    if life >= aliveThreshold:
-      aliveNeighborhood -= 1 / (43.2 * sigmaW - 34.2)
-
-    # if alive
-    if life >= aliveThreshold:
-      # stay alive and adjust life force if neighborhood alive population is within 12.5% to 50%, with life force being at its peak at 31.25%
-      half = (aliveMax + aliveMin) / 2
-      delta = half - aliveMin
-      if aliveNeighborhood < aliveMin or aliveNeighborhood > aliveMax: life = 0
-      else: life = 1 - (abs(aliveNeighborhood - half) / delta)
-    # if almost dead or dead
-    else:
-      # come to life if neighbohood alive population is withing 25% to 50%, with life force being at its peak at 37.5%
-      half = (birthMax + birthMin) / 2
-      delta = half - birthMin
-      if aliveNeighborhood < birthMin or aliveNeighborhood > birthMax: life = 0
-      else: life = 1 - (abs(aliveNeighborhood - half) / delta)
-    
-    # convert life to rgb
-    out[y, x] = max(0, min(255, life * 255))
+# create buffers that hold images for OpenCL, and copy the input image data and smooth matrix
+grayscale_format = cl.ImageFormat(cl.channel_order.LUMINANCE, cl.channel_type.UNORM_INT8)
+smooth_format = cl.ImageFormat(cl.channel_order.LUMINANCE, cl.channel_type.FLOAT)
+image_gpu = cl.Image(context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, grayscale_format, shape=tshape, hostbuf=image)
+out_gpu = cl.Image(context, cl.mem_flags.WRITE_ONLY, grayscale_format, shape=tshape)
+smooth_gpu = cl.Image(context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, smooth_format, shape=image.shape, hostbuf=smooth.astype('float32'))
+program.continuous_life(queue, tshape, None, out_gpu, image_gpu, smooth_gpu)
 print(f"#life: {time.perf_counter_ns() - t0}")
+
+# copy output back from gpu
+cl.enqueue_copy(queue, out, out_gpu, origin=(0, 0), region=tshape, is_blocking=True)
 
 t0 = time.perf_counter_ns()
 PIL.Image.fromarray(out).save('out.png')
