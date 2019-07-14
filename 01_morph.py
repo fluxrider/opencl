@@ -9,7 +9,7 @@ import numpy as np
 import pyopencl as cl
 
 # read image from file (the 'host' is the cpu)
-in_host = cv2.imread('01.png', cv2.IMREAD_GRAYSCALE)
+in_host = cv2.imread('lenna_bw.png', cv2.IMREAD_GRAYSCALE)
 shape = in_host.T.shape
 out_host = np.empty_like(in_host)
 
