@@ -33,11 +33,12 @@ out = np.empty(image.shape)
 # isotropic histogram filter
 # compute values for s[i]
 s = np.arange(samples) * ((depth - 1) / (samples - 1))
-# storage
+# buffers
 lookup = np.empty(depth)
-map = np.empty((samples, W, H))
+map = np.empty((W, H))
 smooth = np.empty((samples, W, H))
 
+# timers
 gcdf = 0
 gfilt = 0
 inter = 0
@@ -46,7 +47,7 @@ for i in range(samples):
   print(f"sample {i}")
   # compute lookup table for each intensities
   t0 = time.perf_counter_ns()
-  gauss = norm(loc=0, scale=sigmaK)
+  gauss = norm(loc=0, scale=sigmaK) # WEIRD: If I move this outside the loop, I get worst performance
   for intensity in range(depth):
     lookup[intensity] = gauss.cdf(intensity - s[i])
   gcdf += time.perf_counter_ns() - t0
@@ -56,11 +57,11 @@ for i in range(samples):
       # scale pixel intensity to depth
       intensity = int((image[y, x]) * (depth - 1))
       # map with lookup
-      map[i, x, y] = lookup[intensity]
+      map[x, y] = lookup[intensity]
 
   # smooth result
   t0 = time.perf_counter_ns()
-  smooth[i] = gaussian_filter(map[i], sigma=sigmaW)
+  smooth[i] = gaussian_filter(map, sigma=sigmaW)
   gfilt += time.perf_counter_ns() - t0
 
 # Cache interpolators
@@ -71,9 +72,9 @@ for y in range(H):
     interpolation[x][y] = interp1d(s, smooth[:,x,y], kind='cubic')
 inter += time.perf_counter_ns() - t0
 print(f"{gcdf}\n{gfilt}\n{inter}")
-#574858000
-#4940000
-#857194700
+#564570100
+#4817400
+#851137600
 
 # for each pixel
 for y in range(H):
