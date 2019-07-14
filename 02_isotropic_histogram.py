@@ -61,14 +61,13 @@ for y in range(H):
     # convert pixel to life force
     life = image[y, x]
     # get the percentage of life in the neighborhood
-    aliveNeighborhood = interp1d(s, smooth[:,x,y], kind='linear')(aliveThreshold * 255)
+    aliveNeighborhood = interp1d(s, smooth[:,x,y], kind='linear')(aliveThreshold * 255) # TODO shouldn't it be (depth - 1)?
 
     # I need to remove the life force at the current position from the neighborhood count, but I'm not sure how to compute the population percentage
     # value of one member of the neighborhood
     # I'm doing an approximation that gaussianW of 1 is approx 3x3 window, and gaussianW of 6 is approx 15x15
     if life >= aliveThreshold:
-      n = 43.2 * sigmaW - 34.2
-      aliveNeighborhood -= 1 / n
+      aliveNeighborhood -= 1 / (43.2 * sigmaW - 34.2)
 
     # if alive
     if life >= aliveThreshold:
