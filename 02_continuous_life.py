@@ -2,33 +2,23 @@
 # It uses an Isotropic Histogram Filter to gather information about the neighborhood. Filter is based on:
 # Smoothed Local Histogram Filters Pixar Technical Memo 10-02 by Michael Kass and Justin Solomon
 
-# powershell profiling: Measure-Command {start-process python 02_isotropic_histogram.py -Wait}
+# powershell profiling: Measure-Command {start-process python 02_continuous_life.py -Wait}
 
 import time
 g0 = time.perf_counter_ns()
 
-import PIL.Image # pip install Pillow
+t0 = time.perf_counter_ns()
+import PIL.Image
 import numpy as np
 from scipy.interpolate import interp1d
 from scipy.ndimage import gaussian_filter
-#import pyopencl as cl
+import pyopencl as cl
+print(f"#impo: {time.perf_counter_ns() - t0}")
+
 # setup OpenCL
-#device = cl.get_platforms()[0].get_devices()[0]
-#context = cl.Context([device])
-#queue = cl.CommandQueue(context, device)
-
-# create buffers that hold images for OpenCL (the 'device' is the gpu), and copy the input image data
-#grayscale_format = cl.ImageFormat(cl.channel_order.LUMINANCE, cl.channel_type.CL_FLOAT)
-#in_device = cl.Image(context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, grayscale_format, shape=shape, hostbuf=in_host)
-#out_device = cl.Image(context, cl.mem_flags.WRITE_ONLY, grayscale_format, shape=shape)
-
-# load and compile OpenCL program
-#program = cl.Program(context, open('01_morph.cl').read()).build()
-
-# call dilate function, copy back result, and write to file
-#program.dilate(queue, shape, None, in_device, out_device)
-#cl.enqueue_copy(queue, out_host, out_device, origin=(0, 0), region=shape, is_blocking=True)
-#cv2.imwrite('out.dilate.png', out_host)
+device = cl.get_platforms()[0].get_devices()[0]
+context = cl.Context([device])
+queue = cl.CommandQueue(context, device)
 
 # life parameters
 aliveThreshold = .2
@@ -42,12 +32,20 @@ sigmaW = 2.0
 # read image from file as normalized grayscale uint8
 t0 = time.perf_counter_ns()
 image = np.asarray(PIL.Image.open('conway_init.png').convert('L'))
+out = np.empty_like(image)
 print(f"#load: {time.perf_counter_ns() - t0}")
+
+# create buffers that hold images for OpenCL (the 'device' is the gpu), and copy the input image data
+grayscale_format = cl.ImageFormat(cl.channel_order.LUMINANCE, cl.channel_type.UNORM_INT8)
+in_device = cl.Image(context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, grayscale_format, shape=image.shape, hostbuf=image)
+out_device = cl.Image(context, cl.mem_flags.WRITE_ONLY, grayscale_format, shape=out.shape)
+
+# load and compile OpenCL program
+program = cl.Program(context, open('02_continuous_life.cl').read()).build()
 
 # execute
 H = image.shape[0]
 W = image.shape[1]
-out = np.empty_like(image)
 
 # pre-calculated cdf
 #from scipy.stats import norm
@@ -104,8 +102,8 @@ PIL.Image.fromarray(out).save('out.png')
 print(f"#save: {time.perf_counter_ns() - t0}")
 print(f"#tota: {time.perf_counter_ns() - g0}")
 
-#load: 16780800
-#smoo: 47242200
-#life: 616774500
-#save: 5908500
-#tota: 1012900300
+#load: 17484900
+#smoo: 53050300
+#life: 619943800
+#save: 5753800
+#tota: 1226519200
