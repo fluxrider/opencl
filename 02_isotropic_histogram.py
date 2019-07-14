@@ -41,7 +41,6 @@ smooth = np.empty((samples, W, H))
 # timers
 gcdf = 0
 gfilt = 0
-inter = 0
 
 for i in range(samples):
   print(f"sample {i}")
@@ -64,18 +63,7 @@ for i in range(samples):
   smooth[i] = gaussian_filter(map, sigma=sigmaW)
   gfilt += time.perf_counter_ns() - t0
 
-# Cache interpolators
-t0 = time.perf_counter_ns()
-interpolation = [[0] * H for i in range(W)] # [W][H]
-for y in range(H):
-  for x in range(W):
-    interpolation[x][y] = interp1d(s, smooth[:,x,y], kind='linear')
-inter += time.perf_counter_ns() - t0
-print(f"{gcdf}\n{gfilt}\n{inter}")
-#568273200
-#4838800
-#156821100
-
+print(f"{gcdf}\n{gfilt}")
 
 # for each pixel
 for y in range(H):
@@ -84,7 +72,7 @@ for y in range(H):
     # convert pixel to life force
     life = image[y, x]
     # get the percentage of life in the neighborhood
-    aliveNeighborhood = interpolation[x][y](aliveThreshold * 255)
+    aliveNeighborhood = interp1d(s, smooth[:,x,y], kind='linear')(aliveThreshold * 255)
 
     # I need to remove the life force at the current position from the neighborhood count, but I'm not sure how to compute the population percentage
     # value of one member of the neighborhood
