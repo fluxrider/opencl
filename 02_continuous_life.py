@@ -35,8 +35,6 @@ print(f"#load: {time.perf_counter_ns() - t0}")
 H = image.shape[0]
 W = image.shape[1]
 
-tshape = (W,H)
-
 # pre-calculated cdf
 #from scipy.stats import norm
 #sigmaK = .05078125
@@ -47,10 +45,10 @@ cdf = [4.1002868059894214e-05, 5.640724836844843e-05, 7.71601683229369e-05, 0.00
 # isotropic histogram filter
 # TODO put loop on GPU
 t0 = time.perf_counter_ns()
-map = np.empty((W, H))
+map = np.empty((H, W))
 for y in range(H):
   for x in range(W):
-    map[x, y] = cdf[image[y, x]]
+    map[y, x] = cdf[image[y, x]]
 smooth = gaussian_filter(map, sigma=sigmaW)
 print(f"#smoo: {time.perf_counter_ns() - t0}")
 
@@ -59,14 +57,14 @@ t0 = time.perf_counter_ns()
 # create buffers that hold images for OpenCL, and copy the input image data and smooth matrix
 grayscale_format = cl.ImageFormat(cl.channel_order.LUMINANCE, cl.channel_type.UNORM_INT8)
 smooth_format = cl.ImageFormat(cl.channel_order.LUMINANCE, cl.channel_type.FLOAT)
-image_gpu = cl.Image(context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, grayscale_format, shape=tshape, hostbuf=image)
-out_gpu = cl.Image(context, cl.mem_flags.WRITE_ONLY, grayscale_format, shape=tshape)
+image_gpu = cl.Image(context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, grayscale_format, shape=image.shape, hostbuf=image)
+out_gpu = cl.Image(context, cl.mem_flags.WRITE_ONLY, grayscale_format, shape=image.shape)
 smooth_gpu = cl.Image(context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, smooth_format, shape=image.shape, hostbuf=smooth.astype('float32'))
-program.continuous_life(queue, tshape, None, out_gpu, image_gpu, smooth_gpu)
+program.continuous_life(queue, image.shape, None, out_gpu, image_gpu, smooth_gpu)
 print(f"#life: {time.perf_counter_ns() - t0}")
 
 # copy output back from gpu
-cl.enqueue_copy(queue, out, out_gpu, origin=(0, 0), region=tshape, is_blocking=True)
+cl.enqueue_copy(queue, out, out_gpu, origin=(0, 0), region=image.shape, is_blocking=True)
 
 t0 = time.perf_counter_ns()
 PIL.Image.fromarray(out).save('out.png')
