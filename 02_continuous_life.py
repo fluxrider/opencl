@@ -3,6 +3,7 @@
 # Smoothed Local Histogram Filters Pixar Technical Memo 10-02 by Michael Kass and Justin Solomon
 
 # imports
+import sys
 import PIL.Image
 import numpy as np
 from scipy.interpolate import interp1d
@@ -26,13 +27,12 @@ image_tk_persistent = None
 canvas = tk.Canvas(root, width=image.shape[1], height=image.shape[0])
 canvas_image = canvas.create_image(0, 0, anchor=tk.NW, image=image_tk_persistent)
 canvas.pack()
+def close(event):
+  sys.exit()
+root.bind('<Escape>', close)
 
-def heartbeat(canvas, canvas_image):
-  global image
-  global context
-  global queue
-  global program
-  global device
+# each heartbeat advances the game of life one generation
+def heartbeat(canvas, canvas_image, context, program, queue, image):
   format_u8 = cl.ImageFormat(cl.channel_order.LUMINANCE, cl.channel_type.UNORM_INT8)
   format_f32 = cl.ImageFormat(cl.channel_order.LUMINANCE, cl.channel_type.FLOAT)
 
@@ -41,6 +41,7 @@ def heartbeat(canvas, canvas_image):
   image_tk_persistent = PIL.ImageTk.PhotoImage(PIL.Image.fromarray(image))
   canvas.itemconfig(canvas_image, image=image_tk_persistent)
 
+  # load image on gpu
   image_gpu = cl.Image(context, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR, format_u8, shape=image.shape, hostbuf=image)
 
   # isotropic histogram filter
@@ -57,8 +58,9 @@ def heartbeat(canvas, canvas_image):
   out = np.empty_like(image)
   cl.enqueue_copy(queue, out, out_gpu, origin=(0, 0), region=image.shape, is_blocking=True)
 
-  image = out
-  canvas.after(1000, heartbeat, canvas, canvas_image)
+  # schedule next pass
+  canvas.after(10, heartbeat, canvas, canvas_image, context, program, queue, out)
 
-heartbeat(canvas, canvas_image)
+# bootstrap heartbeats
+heartbeat(canvas, canvas_image, context, program, queue, image)
 root.mainloop()
