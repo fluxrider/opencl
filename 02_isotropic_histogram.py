@@ -69,12 +69,13 @@ t0 = time.perf_counter_ns()
 interpolation = [[0] * H for i in range(W)] # [W][H]
 for y in range(H):
   for x in range(W):
-    interpolation[x][y] = interp1d(s, smooth[:,x,y], kind='cubic')
+    interpolation[x][y] = interp1d(s, smooth[:,x,y], kind='linear')
 inter += time.perf_counter_ns() - t0
 print(f"{gcdf}\n{gfilt}\n{inter}")
-#564570100
-#4817400
-#851137600
+#568273200
+#4838800
+#156821100
+
 
 # for each pixel
 for y in range(H):
