@@ -23,6 +23,7 @@ image = np.asarray(PIL.Image.open('conway_init.png').convert('L'))
 
 # init gui
 root = tk.Tk()
+root.title("Continuous Life")
 image_tk_persistent = None
 canvas = tk.Canvas(root, width=image.shape[1], height=image.shape[0])
 canvas_image = canvas.create_image(0, 0, anchor=tk.NW, image=image_tk_persistent)
