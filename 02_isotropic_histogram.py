@@ -4,13 +4,14 @@
 
 # powershell profiling: Measure-Command {start-process python 02_isotropic_histogram.py -Wait}
 
+import time
+g0 = time.perf_counter_ns()
+
 import PIL.Image # pip install Pillow
 import numpy as np
 from scipy.interpolate import interp1d
 from scipy.ndimage import gaussian_filter
 #import pyopencl as cl
-import time
-
 # setup OpenCL
 #device = cl.get_platforms()[0].get_devices()[0]
 #context = cl.Context([device])
@@ -41,7 +42,7 @@ sigmaW = 2.0
 # read image from file as normalized grayscale uint8
 t0 = time.perf_counter_ns()
 image = np.asarray(PIL.Image.open('conway_init.png').convert('L'))
-print(f"load: {time.perf_counter_ns() - t0}")
+print(f"#load: {time.perf_counter_ns() - t0}")
 
 # execute
 H = image.shape[0]
@@ -63,7 +64,7 @@ for y in range(H):
   for x in range(W):
     map[x, y] = cdf[image[y, x]]
 smooth = gaussian_filter(map, sigma=sigmaW)
-print(f"smoo: {time.perf_counter_ns() - t0}")
+print(f"#smoo: {time.perf_counter_ns() - t0}")
 
 # for each pixel
 # TODO put loop on GPU
@@ -96,13 +97,15 @@ for y in range(H):
     
     # convert life to rgb
     out[y, x] = max(0, min(255, life * 255))
-print(f"life: {time.perf_counter_ns() - t0}")
+print(f"#life: {time.perf_counter_ns() - t0}")
 
 t0 = time.perf_counter_ns()
 PIL.Image.fromarray(out).save('out.png')
-print(f"save: {time.perf_counter_ns() - t0}")
+print(f"#save: {time.perf_counter_ns() - t0}")
+print(f"#tota: {time.perf_counter_ns() - g0}")
 
-#load: 16931700
-#smoo: 50175000
-#life: 585103800
-#save: 6340100
+#load: 16780800
+#smoo: 47242200
+#life: 616774500
+#save: 5908500
+#tota: 1012900300
