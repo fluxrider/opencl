@@ -17,8 +17,7 @@ aliveMax = .5
 birthMin = .25
 birthMax = .5
 # histogram paramaters
-depth = 256
-sigmaK = 13.0
+sigmaK = 13.0 / 256
 sigmaW = 2.0
 
 # read image from file as normalized grayscale
@@ -30,19 +29,16 @@ W = image.shape[1]
 out = np.empty(image.shape)
 
 # isotropic histogram filter
-s = aliveThreshold * (depth - 1)
-map = np.empty((W, H))
-    
-# map each pixel of image
 # TODO put loop on GPU
 gauss = norm(loc=0, scale=sigmaK)
 cdf_cache = {}
+map = np.empty((W, H))
 for y in range(H):
   for x in range(W):
     # scale pixel intensity to depth
-    intensity = int((image[y, x]) * (depth - 1))
+    intensity = image[y, x]
     if intensity not in cdf_cache:
-      cdf_cache[intensity] = gauss.cdf(intensity - s)
+      cdf_cache[intensity] = gauss.cdf(intensity - aliveThreshold)
     map[x, y] = cdf_cache[intensity]
 # smooth result
 smooth = gaussian_filter(map, sigma=sigmaW)
